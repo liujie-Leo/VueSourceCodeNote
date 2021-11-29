@@ -24,53 +24,49 @@ export function validateProp (
   propsData: Object,
   vm?: Component
 ): any {
-  const prop = propOptions[key]
-  const absent = !hasOwn(propsData, key)
-  let value = propsData[key]
-  // boolean casting
-  const booleanIndex = getTypeIndex(Boolean, prop.type)
+  const prop = propOptions[key];
+  const absent = !hasOwn(propsData, key); // 该key是否缺失，即使用该组件时未传该值
+  let value = propsData[key];
+  // getTypeIndex 函数的作用准确地说是用来查找第一个参数所指定的类型构造函数是否存在于第二个参数所指定的类型构造函数数组中
+  // 如果存在，返回第一个参数在第二个参数中对应的下标。不存在则返回-1
+  const booleanIndex = getTypeIndex(Boolean, prop.type);
   if (booleanIndex > -1) {
-    if (absent && !hasOwn(prop, 'default')) {
-      value = false
-    } else if (value === '' || value === hyphenate(key)) {
-      // only cast empty string / same name to boolean if
-      // boolean has higher priority
-      const stringIndex = getTypeIndex(String, prop.type)
+    if (absent && !hasOwn(prop, "default")) {
+      value = false;
+    } else if (value === "" || value === hyphenate(key)) {
+      const stringIndex = getTypeIndex(String, prop.type);
       if (stringIndex < 0 || booleanIndex < stringIndex) {
-        value = true
+        value = true;
       }
     }
   }
-  // check default value
   if (value === undefined) {
-    value = getPropDefaultValue(vm, prop, key)
-    // since the default value is a fresh copy,
-    // make sure to observe it.
-    const prevShouldObserve = shouldObserve
-    toggleObserving(true)
-    observe(value)
-    toggleObserving(prevShouldObserve)
+    // 如果没有定义value，则将value置为Default值
+    value = getPropDefaultValue(vm, prop, key);
+    const prevShouldObserve = shouldObserve;
+    toggleObserving(true);
+    observe(value);
+    toggleObserving(prevShouldObserve);
   }
   if (
-    process.env.NODE_ENV !== 'production' &&
-    // skip validation for weex recycle-list child component props
-    !(__WEEX__ && isObject(value) && ('@binding' in value))
+    process.env.NODE_ENV !== "production" &&
+    !(__WEEX__ && isObject(value) && "@binding" in value)
   ) {
-    assertProp(prop, key, value, vm, absent)
+    assertProp(prop, key, value, vm, absent);
   }
-  return value
+  return value;
 }
 
 /**
  * Get the default value of a prop.
  */
-function getPropDefaultValue (vm: ?Component, prop: PropOptions, key: string): any {
-  // no default, return undefined
+function getPropDefaultValue(vm: ?Component, prop: PropOptions, key: string): any {
+  // 没有默认值，返回undefined
   if (!hasOwn(prop, 'default')) {
     return undefined
   }
   const def = prop.default
-  // warn against non-factory defaults for Object & Array
+  // 非生产环境如果默认值是对象，需要放在函数中返回，防止多个组件实例共享一份数据
   if (process.env.NODE_ENV !== 'production' && isObject(def)) {
     warn(
       'Invalid default value for prop "' + key + '": ' +
@@ -79,23 +75,21 @@ function getPropDefaultValue (vm: ?Component, prop: PropOptions, key: string): a
       vm
     )
   }
-  // the raw prop value was also undefined from previous render,
-  // return previous default value to avoid unnecessary watcher trigger
-  if (vm && vm.$options.propsData &&
+  if (
+    vm && vm.$options.propsData &&
     vm.$options.propsData[key] === undefined &&
     vm._props[key] !== undefined
   ) {
     return vm._props[key]
   }
-  // call factory function for non-Function types
-  // a value is Function if its prototype is function even across different execution context
+  // def可能是工厂函数，此时执行该函数获取默认值
   return typeof def === 'function' && getType(prop.type) !== 'Function'
     ? def.call(vm)
     : def
 }
 
 /**
- * Assert whether a prop is valid.
+ * props校验
  */
 function assertProp (
   prop: PropOptions,
@@ -104,6 +98,7 @@ function assertProp (
   vm: ?Component,
   absent: boolean
 ) {
+  // 需要传但没传的数值
   if (prop.required && absent) {
     warn(
       'Missing required prop: "' + name + '"',
@@ -111,9 +106,11 @@ function assertProp (
     )
     return
   }
+  // 值为非必填且为null
   if (value == null && !prop.required) {
     return
   }
+  // 类型判断，判断外界传递的prop值是否与期望的类型相符合
   let type = prop.type
   let valid = !type || type === true
   const expectedTypes = []
@@ -187,9 +184,10 @@ const functionTypeCheckRE = /^\s*function (\w+)/
  * because a simple equality check will fail when running
  * across different vms / iframes.
  */
-function getType (fn) {
-  const match = fn && fn.toString().match(functionTypeCheckRE)
-  return match ? match[1] : ''
+function getType(fn) {
+  // fn.toString() = function Boolean() { [native code] }
+  const match = fn && fn.toString().match(functionTypeCheckRE);
+  return match ? match[1] : "";
 }
 
 function isSameType (a, b) {

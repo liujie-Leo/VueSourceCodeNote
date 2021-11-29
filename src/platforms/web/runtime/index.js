@@ -19,16 +19,32 @@ import { patch } from './patch'
 import platformDirectives from './directives/index'
 import platformComponents from './components/index'
 
-// install platform specific utils
+//  安装特定平台的utils
 Vue.config.mustUseProp = mustUseProp
 Vue.config.isReservedTag = isReservedTag
 Vue.config.isReservedAttr = isReservedAttr
 Vue.config.getTagNamespace = getTagNamespace
 Vue.config.isUnknownElement = isUnknownElement
 
-// install platform runtime directives & components
+// install platform runtime directives & components 安装特定平台运行时的指令和组件
 extend(Vue.options.directives, platformDirectives)
 extend(Vue.options.components, platformComponents)
+// 上面两次extend混合之后。Vue.options为
+/**
+ {
+  components: {
+		KeepAlive,
+		Transition,      新增
+		TransitionGroup  新增
+	}, 
+	directives: {
+		model,   新增
+		show     新增
+	},
+	filters: Object.create(null),
+	_base: Vue
+ }
+ */
 
 // install platform patch function
 Vue.prototype.__patch__ = inBrowser ? patch : noop

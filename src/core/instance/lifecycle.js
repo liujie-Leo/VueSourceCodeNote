@@ -30,29 +30,37 @@ export function setActiveInstance(vm: Component) {
 }
 
 export function initLifecycle (vm: Component) {
-  const options = vm.$options
+  const options = vm.$options;
 
-  // locate first non-abstract parent
-  let parent = options.parent
+  // 将当前实例添加到父实例的 $children 属性里，并设置当前实例的 $parent 指向父实例
+  let parent = options.parent;
+  // 如果当前实例有父组件，且当前实例不是抽象的
+  // 抽象组件：一般不渲染真实DOM，比如keep-alive/transition
   if (parent && !options.abstract) {
+    // 使用while循环查找第一个非抽象的父组件
+    // 为什么要跳过抽象组件？避免抽象组件出现在父子关系的路径上
     while (parent.$options.abstract && parent.$parent) {
-      parent = parent.$parent
+      parent = parent.$parent;
     }
-    parent.$children.push(vm)
+    // 经过上面的while循环后，parent应该是一个非抽象的组件，将它作为当前实例的父级
+    // 所以将当前实例vm添加到腹肌的$children里
+    parent.$children.push(vm);
   }
 
-  vm.$parent = parent
-  vm.$root = parent ? parent.$root : vm
+  // 设置当前实例的$parent指向父级
+  vm.$parent = parent;
+  // 设置$root属性，有父级就是用父级的$root，否则$root指向自身
+  vm.$root = parent ? parent.$root : vm;
 
-  vm.$children = []
-  vm.$refs = {}
+  vm.$children = [];
+  vm.$refs = {};
 
-  vm._watcher = null
-  vm._inactive = null
-  vm._directInactive = false
-  vm._isMounted = false
-  vm._isDestroyed = false
-  vm._isBeingDestroyed = false
+  vm._watcher = null;
+  vm._inactive = null;
+  vm._directInactive = false;
+  vm._isMounted = false;
+  vm._isDestroyed = false;
+  vm._isBeingDestroyed = false;
 }
 
 export function lifecycleMixin (Vue: Class<Component>) {
@@ -143,73 +151,81 @@ export function mountComponent (
   el: ?Element,
   hydrating?: boolean
 ): Component {
-  vm.$el = el
+  vm.$el = el;
   if (!vm.$options.render) {
-    vm.$options.render = createEmptyVNode
-    if (process.env.NODE_ENV !== 'production') {
-      /* istanbul ignore if */
-      if ((vm.$options.template && vm.$options.template.charAt(0) !== '#') ||
-        vm.$options.el || el) {
+    // 如果vm.$options中没有render函数，则赋值一个空的VNode
+    vm.$options.render = createEmptyVNode;
+    if (process.env.NODE_ENV !== "production") {
+      if (
+        (vm.$options.template && vm.$options.template.charAt(0) !== "#") ||
+        vm.$options.el ||
+        el
+      ) {
         warn(
-          'You are using the runtime-only build of Vue where the template ' +
-          'compiler is not available. Either pre-compile the templates into ' +
-          'render functions, or use the compiler-included build.',
+          "You are using the runtime-only build of Vue where the template " +
+            "compiler is not available. Either pre-compile the templates into " +
+            "render functions, or use the compiler-included build.",
           vm
-        )
+        );
       } else {
         warn(
-          'Failed to mount component: template or render function not defined.',
+          "Failed to mount component: template or render function not defined.",
           vm
-        )
+        );
       }
     }
   }
-  callHook(vm, 'beforeMount')
+  callHook(vm, "beforeMount");
 
-  let updateComponent
-  /* istanbul ignore if */
-  if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
+  // 定义并初始化updateComponent函数
+  // updateComponent 函数的作用就是：把渲染函数生成的虚拟DOM渲染成真正的DOM
+  let updateComponent;
+  if (process.env.NODE_ENV !== "production" && config.performance && mark) {
     updateComponent = () => {
-      const name = vm._name
-      const id = vm._uid
-      const startTag = `vue-perf-start:${id}`
-      const endTag = `vue-perf-end:${id}`
+      const name = vm._name;
+      const id = vm._uid;
+      const startTag = `vue-perf-start:${id}`;
+      const endTag = `vue-perf-end:${id}`;
 
-      mark(startTag)
-      const vnode = vm._render()
-      mark(endTag)
-      measure(`vue ${name} render`, startTag, endTag)
+      mark(startTag);
+      const vnode = vm._render();
+      mark(endTag);
+      measure(`vue ${name} render`, startTag, endTag);
 
-      mark(startTag)
-      vm._update(vnode, hydrating)
-      mark(endTag)
-      measure(`vue ${name} patch`, startTag, endTag)
-    }
+      mark(startTag);
+      vm._update(vnode, hydrating);
+      mark(endTag);
+      measure(`vue ${name} patch`, startTag, endTag);
+    };
   } else {
     updateComponent = () => {
-      vm._update(vm._render(), hydrating)
-    }
+      // vm._render 函数的作用是调用 vm.$options.render 函数并返回生成的虚拟节点(vnode)
+      // vm._update 函数的作用是把 vm._render 函数生成的虚拟节点渲染成真正的 DOM
+      vm._update(vm._render(), hydrating);
+    };
   }
 
-  // we set this to vm._watcher inside the watcher's constructor
-  // since the watcher's initial patch may call $forceUpdate (e.g. inside child
-  // component's mounted hook), which relies on vm._watcher being already defined
-  new Watcher(vm, updateComponent, noop, {
-    before () {
-      if (vm._isMounted && !vm._isDestroyed) {
-        callHook(vm, 'beforeUpdate')
-      }
-    }
-  }, true /* isRenderWatcher */)
-  hydrating = false
+  // 渲染函数的观察者
+  new Watcher(
+    vm,
+    updateComponent,
+    noop,
+    {
+      before() {
+        if (vm._isMounted && !vm._isDestroyed) {
+          callHook(vm, "beforeUpdate");
+        }
+      },
+    },
+    true
+  );
+  hydrating = false;
 
-  // manually mounted instance, call mounted on self
-  // mounted is called for render-created child components in its inserted hook
   if (vm.$vnode == null) {
-    vm._isMounted = true
-    callHook(vm, 'mounted')
+    vm._isMounted = true;
+    callHook(vm, "mounted");
   }
-  return vm
+  return vm;
 }
 
 export function updateChildComponent (
@@ -335,10 +351,12 @@ export function deactivateChildComponent (vm: Component, direct?: boolean) {
 }
 
 export function callHook (vm: Component, hook: string) {
-  // #7573 disable dep collection when invoking lifecycle hooks
   pushTarget()
+  // Vue进行选项合并时。对于生命周期钩子最终会被合并处理成一个数组
+  // 所以这里的handlers是一个数组
   const handlers = vm.$options[hook]
   const info = `${hook} hook`
+  // 开发者在编写组件时未必为写声明周期钩子，所这里要做一个判断
   if (handlers) {
     for (let i = 0, j = handlers.length; i < j; i++) {
       invokeWithErrorHandling(handlers[i], vm, null, vm, info)

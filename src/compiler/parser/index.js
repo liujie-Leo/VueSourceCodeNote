@@ -76,6 +76,7 @@ export function createASTElement (
 /**
  * Convert HTML string to AST.
  */
+// parseHTML做词法分析，parse在词法分析的基础上做句法分析
 export function parse (
   template: string,
   options: CompilerOptions

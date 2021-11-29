@@ -14,7 +14,7 @@ let uid = 0
 
 export function initMixin (Vue: Class<Component>) {
   Vue.prototype._init = function (options?: Object) {
-    const vm: Component = this
+    const vm: Component = this  // 实例对象
     // a uid
     vm._uid = uid++
 
@@ -26,13 +26,9 @@ export function initMixin (Vue: Class<Component>) {
       mark(startTag)
     }
 
-    // a flag to avoid this being observed
-    vm._isVue = true
-    // merge options
+    vm._isVue = true  // 代表vm对象和Vue实例
+
     if (options && options._isComponent) {
-      // optimize internal component instantiation
-      // since dynamic options merging is pretty slow, and none of the
-      // internal component options needs special treatment.
       initInternalComponent(vm, options)
     } else {
       vm.$options = mergeOptions(
@@ -41,24 +37,24 @@ export function initMixin (Vue: Class<Component>) {
         vm
       )
     }
-    /* istanbul ignore else */
+
     if (process.env.NODE_ENV !== 'production') {
       initProxy(vm)
     } else {
       vm._renderProxy = vm
     }
-    // expose real self
+
     vm._self = vm
     initLifecycle(vm)
     initEvents(vm)
     initRender(vm)
+    
     callHook(vm, 'beforeCreate')
-    initInjections(vm) // resolve injections before data/props
+    initInjections(vm) 
     initState(vm)
-    initProvide(vm) // resolve provide after data/props
+    initProvide(vm) 
     callHook(vm, 'created')
 
-    /* istanbul ignore if */
     if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
       vm._name = formatComponentName(vm, false)
       mark(endTag)
@@ -90,6 +86,7 @@ export function initInternalComponent (vm: Component, options: InternalComponent
   }
 }
 
+// 该方法的作用是：永远获得当前实例构造者的options属性
 export function resolveConstructorOptions (Ctor: Class<Component>) {
   let options = Ctor.options
   if (Ctor.super) {
