@@ -21,17 +21,17 @@ import {
   getAndRemoveAttrByRegex
 } from '../helpers'
 
-export const onRE = /^@|^v-on:/
+export const onRE = /^@|^v-on:/ // 匹配以字符 @ 或 v-on: 开头的字符串，主要作用是检测标签属性名是否是监听事件的指令
 export const dirRE = process.env.VBIND_PROP_SHORTHAND
   ? /^v-|^@|^:|^\.|^#/
   : /^v-|^@|^:|^#/
-export const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
-export const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
-const stripParensRE = /^\(|\)$/g
+export const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/ //匹配 v-for 属性的值，并捕获 in 或 of 前后的字符串
+export const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/ //匹配 forAliasRE 第一个捕获组所捕获到的字符串,不包含字符 ,} 和 ]，如 ,index
+const stripParensRE = /^\(|\)$/g  // 捕获要么以字符 ( 开头，要么以字符 ) 结尾的字符串，或者两者都满足
 const dynamicArgRE = /^\[.*\]$/
 
-const argRE = /:(.*)$/
-export const bindRE = /^:|^\.|^v-bind:/
+const argRE = /:(.*)$/  // 匹配指令中的参数，有一个捕获组，捕获参数的名字
+export const bindRE = /^:|^\.|^v-bind:/  // 检测一个标签的属性是否是绑定v-bind
 const propBindRE = /^\./
 const modifierRE = /\.[^.\]]+(?=[^\]]*$)/g
 
@@ -42,11 +42,12 @@ const whitespaceRE = /[ \f\t\r\n]+/g
 
 const invalidAttributeRE = /[\s"'<>\/=]/
 
-const decodeHTMLCached = cached(he.decode)
+const decodeHTMLCached = cached(he.decode) // he 为第三方的库，he.decode 函数用于 HTML 字符实体的解码工作
+// console.log(he.decode('&#x26;'))  // &#x26; -> '&'
 
 export const emptySlotScopeToken = `_empty_`
 
-// configurable state
+// 定义了一些平台化的选项变量
 export let warn: any
 let delimiters
 let transforms
@@ -57,6 +58,7 @@ let platformMustUseProp
 let platformGetTagNamespace
 let maybeComponent
 
+// 创建一个元素的描述对象
 export function createASTElement (
   tag: string,
   attrs: Array<ASTAttr>,
@@ -76,133 +78,142 @@ export function createASTElement (
 /**
  * Convert HTML string to AST.
  */
-// parseHTML做词法分析，parse在词法分析的基础上做句法分析
+// parseHTML做词法分析，parse在词法分析的基础上做句法分析，生成AST抽象语法树
 export function parse (
   template: string,
   options: CompilerOptions
 ): ASTElement | void {
-  warn = options.warn || baseWarn
+  // 初始化 平台化的变量
+  warn = options.warn || baseWarn; // warn 用来打印警告信息
 
-  platformIsPreTag = options.isPreTag || no
-  platformMustUseProp = options.mustUseProp || no
-  platformGetTagNamespace = options.getTagNamespace || no
-  const isReservedTag = options.isReservedTag || no
-  maybeComponent = (el: ASTElement) => !!(
-    el.component ||
-    el.attrsMap[':is'] ||
-    el.attrsMap['v-bind:is'] ||
-    !(el.attrsMap.is ? isReservedTag(el.attrsMap.is) : isReservedTag(el.tag))
-  )
-  transforms = pluckModuleFunction(options.modules, 'transformNode')
-  preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
-  postTransforms = pluckModuleFunction(options.modules, 'postTransformNode')
+  platformIsPreTag = options.isPreTag || no; // 通过给定的标签名字判断该标签是否是 pre 标签
+  platformMustUseProp = options.mustUseProp || no; // 检测一个属性在标签中是否要使用元素对象原生的 prop 进行绑定
+  platformGetTagNamespace = options.getTagNamespace || no; // 获取元素标签的命名空间
+  const isReservedTag = options.isReservedTag || no;
+  maybeComponent = (el: ASTElement) =>
+    !!(
+      el.component ||
+      el.attrsMap[":is"] ||
+      el.attrsMap["v-bind:is"] ||
+      !(el.attrsMap.is ? isReservedTag(el.attrsMap.is) : isReservedTag(el.tag))
+    );
 
-  delimiters = options.delimiters
+  //transforms、preTransforms、postTransforms其实和下面的process**系列的函数没有什么区别
+  // 和process**区分的原因是出于平台化考虑
+  transforms = pluckModuleFunction(options.modules, "transformNode");
+  // preTransforms是通过 pluckModuleFunction 函数从 options.modules 选项中筛选出名字为 preTransformNode 函数所组成的数组
+  preTransforms = pluckModuleFunction(options.modules, "preTransformNode");
+  postTransforms = pluckModuleFunction(options.modules, "postTransformNode");
 
-  const stack = []
-  const preserveWhitespace = options.preserveWhitespace !== false
-  const whitespaceOption = options.whitespace
-  let root
-  let currentParent
-  let inVPre = false
-  let inPre = false
-  let warned = false
+  delimiters = options.delimiters;
 
-  function warnOnce (msg, range) {
+  const stack = [];
+  const preserveWhitespace = options.preserveWhitespace !== false; // 告诉编译器在编译 html 字符串时是否放弃标签之间的空格
+  const whitespaceOption = options.whitespace;
+  let root;
+  let currentParent;
+  let inVPre = false; // 标识当前解析的标签是否在拥有 v-pre 的标签之内
+  let inPre = false; // 标识当前正在解析的标签是否在 <pre></pre> 标签之内
+  let warned = false;
+
+  // 只警告一次
+  function warnOnce(msg, range) {
     if (!warned) {
-      warned = true
-      warn(msg, range)
+      warned = true;
+      warn(msg, range);
     }
   }
 
-  function closeElement (element) {
-    trimEndingWhitespace(element)
+  function closeElement(element) {
+    trimEndingWhitespace(element);
     if (!inVPre && !element.processed) {
-      element = processElement(element, options)
+      element = processElement(element, options);
     }
-    // tree management
     if (!stack.length && element !== root) {
       // allow root elements with v-if, v-else-if and v-else
       if (root.if && (element.elseif || element.else)) {
-        if (process.env.NODE_ENV !== 'production') {
-          checkRootConstraints(element)
+        if (process.env.NODE_ENV !== "production") {
+          checkRootConstraints(element); // 检查当前元素是否符合作为根元素的要求
         }
         addIfCondition(root, {
           exp: element.elseif,
-          block: element
-        })
-      } else if (process.env.NODE_ENV !== 'production') {
+          block: element,
+        });
+      } else if (process.env.NODE_ENV !== "production") {
         warnOnce(
           `Component template should contain exactly one root element. ` +
-          `If you are using v-if on multiple elements, ` +
-          `use v-else-if to chain them instead.`,
+            `If you are using v-if on multiple elements, ` +
+            `use v-else-if to chain them instead.`,
           { start: element.start }
-        )
+        );
       }
     }
+
+    // 当前元素存在父级 && 当前元素不是被禁止的元素
     if (currentParent && !element.forbidden) {
       if (element.elseif || element.else) {
-        processIfConditions(element, currentParent)
+        processIfConditions(element, currentParent);
       } else {
         if (element.slotScope) {
-          // scoped slot
-          // keep it in the children list so that v-else(-if) conditions can
-          // find it as the prev node.
-          const name = element.slotTarget || '"default"'
-          ;(currentParent.scopedSlots || (currentParent.scopedSlots = {}))[name] = element
+          const name = element.slotTarget || '"default"';
+          (currentParent.scopedSlots || (currentParent.scopedSlots = {}))[
+            name
+          ] = element;
         }
-        currentParent.children.push(element)
-        element.parent = currentParent
+        currentParent.children.push(element);
+        element.parent = currentParent;
       }
     }
 
-    // final children cleanup
-    // filter out scoped slots
-    element.children = element.children.filter(c => !(c: any).slotScope)
-    // remove trailing whitespace node again
-    trimEndingWhitespace(element)
+    element.children = element.children.filter((c) => !(c: any).slotScope);
+    trimEndingWhitespace(element);
 
-    // check pre state
     if (element.pre) {
-      inVPre = false
+      inVPre = false;
     }
     if (platformIsPreTag(element.tag)) {
-      inPre = false
+      inPre = false;
     }
-    // apply post-transforms
     for (let i = 0; i < postTransforms.length; i++) {
-      postTransforms[i](element, options)
+      postTransforms[i](element, options);
     }
   }
 
-  function trimEndingWhitespace (el) {
+  // 去掉结束标签空格
+  function trimEndingWhitespace(el) {
     // remove trailing whitespace node
     if (!inPre) {
-      let lastNode
+      let lastNode;
       while (
         (lastNode = el.children[el.children.length - 1]) &&
         lastNode.type === 3 &&
-        lastNode.text === ' '
+        lastNode.text === " "
       ) {
-        el.children.pop()
+        el.children.pop();
       }
     }
   }
 
-  function checkRootConstraints (el) {
-    if (el.tag === 'slot' || el.tag === 'template') {
+  // 检测模板根元素是否符合要求
+  // Vue模板时会受到三种约束
+  // 1.仅有一个被渲染的根元素
+  // 2.不能使用slot标签和tempalte标签作为模板的根元素
+  // 3.根元素不能使用v-for指令
+  function checkRootConstraints(el) {
+    if (el.tag === "slot" || el.tag === "template") {
+      // 使用warOnce是为了每次只提示一个编译错误给用户，避免多次打印不同错误给用户产生迷惑
       warnOnce(
         `Cannot use <${el.tag}> as component root element because it may ` +
-        'contain multiple nodes.',
+          "contain multiple nodes.",
         { start: el.start }
-      )
+      );
     }
-    if (el.attrsMap.hasOwnProperty('v-for')) {
+    if (el.attrsMap.hasOwnProperty("v-for")) {
       warnOnce(
-        'Cannot use v-for on stateful component root element because ' +
-        'it renders multiple elements.',
-        el.rawAttrsMap['v-for']
-      )
+        "Cannot use v-for on stateful component root element because " +
+          "it renders multiple elements.",
+        el.rawAttrsMap["v-for"]
+      );
     }
   }
 
@@ -215,195 +226,222 @@ export function parse (
     shouldDecodeNewlinesForHref: options.shouldDecodeNewlinesForHref,
     shouldKeepComment: options.comments,
     outputSourceRange: options.outputSourceRange,
-    start (tag, attrs, unary, start, end) {
-      // check namespace.
-      // inherit parent ns if there is one
-      const ns = (currentParent && currentParent.ns) || platformGetTagNamespace(tag)
+    start(tag, attrs, unary, start, end) {
+      const ns =
+        (currentParent && currentParent.ns) || platformGetTagNamespace(tag); // 标签的命名空间
 
-      // handle IE svg bug
-      /* istanbul ignore if */
-      if (isIE && ns === 'svg') {
-        attrs = guardIESVGBug(attrs)
+      // 解决ie上的svg bug
+      if (isIE && ns === "svg") {
+        attrs = guardIESVGBug(attrs);
       }
 
-      let element: ASTElement = createASTElement(tag, attrs, currentParent)
+      let element: ASTElement = createASTElement(tag, attrs, currentParent); // 通过createASTElement创建当前元素的描述对象
+
+      // 如果当前解析的开始标签为svg或者math或者他们的子节点，都会别其他html标签的元素描述对象多出一个ns属性，该属性标识了该标签的命名空间
       if (ns) {
-        element.ns = ns
+        element.ns = ns;
       }
 
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== "production") {
         if (options.outputSourceRange) {
-          element.start = start
-          element.end = end
+          element.start = start;
+          element.end = end;
           element.rawAttrsMap = element.attrsList.reduce((cumulated, attr) => {
-            cumulated[attr.name] = attr
-            return cumulated
-          }, {})
+            cumulated[attr.name] = attr;
+            return cumulated;
+          }, {});
         }
-        attrs.forEach(attr => {
+        attrs.forEach((attr) => {
           if (invalidAttributeRE.test(attr.name)) {
             warn(
               `Invalid dynamic argument expression: attribute names cannot contain ` +
-              `spaces, quotes, <, >, / or =.`,
+                `spaces, quotes, <, >, / or =.`,
               {
                 start: attr.start + attr.name.indexOf(`[`),
-                end: attr.start + attr.name.length
+                end: attr.start + attr.name.length,
               }
-            )
+            );
           }
-        })
+        });
       }
 
+      // 判断在非服务端渲染的情况下，当前元素是否是禁止在模板中使用的标签，如果是则抛出警告
+      // 比如style或script
       if (isForbiddenTag(element) && !isServerRendering()) {
-        element.forbidden = true
-        process.env.NODE_ENV !== 'production' && warn(
-          'Templates should only be responsible for mapping the state to the ' +
-          'UI. Avoid placing tags with side-effects in your templates, such as ' +
-          `<${tag}>` + ', as they will not be parsed.',
-          { start: element.start }
-        )
+        element.forbidden = true;
+        process.env.NODE_ENV !== "production" &&
+          warn(
+            "Templates should only be responsible for mapping the state to the " +
+              "UI. Avoid placing tags with side-effects in your templates, such as " +
+              `<${tag}>` +
+              ", as they will not be parsed.",
+            { start: element.start }
+          );
       }
 
-      // apply pre-transforms
       for (let i = 0; i < preTransforms.length; i++) {
-        element = preTransforms[i](element, options) || element
+        element = preTransforms[i](element, options) || element;
       }
 
+      // 这里开始对当前元素描述对象做额外处理
+      // 使得该元素描述对象能更好的描述一个标签
+      // 简单来首就是在元素描述对象上添加各种各样的具有标识作用的属性
       if (!inVPre) {
-        processPre(element)
+        processPre(element);
         if (element.pre) {
-          inVPre = true
+          inVPre = true;
         }
       }
       if (platformIsPreTag(element.tag)) {
-        inPre = true
+        inPre = true;
       }
       if (inVPre) {
-        processRawAttrs(element)
+        processRawAttrs(element);
       } else if (!element.processed) {
         // structural directives
-        processFor(element)
-        processIf(element)
-        processOnce(element)
+        processFor(element);
+        processIf(element);
+        processOnce(element);
       }
 
+      // 只有第一次调用start函数时root是不存在，即为根标签
       if (!root) {
-        root = element
-        if (process.env.NODE_ENV !== 'production') {
-          checkRootConstraints(root)
+        root = element;
+        if (process.env.NODE_ENV !== "production") {
+          checkRootConstraints(root);
         }
       }
 
       if (!unary) {
-        currentParent = element
-        stack.push(element)
+        // 每当遇到一个非一元标签都会将钙元素的描述对象添加到stack数组
+        // 并且currentParent始终存储的是stack栈顶的元素，即当前解析元素的父级
+        currentParent = element;
+        stack.push(element);
       } else {
-        closeElement(element)
+        closeElement(element);
       }
     },
 
-    end (tag, start, end) {
-      const element = stack[stack.length - 1]
+    end(tag, start, end) {
+      const element = stack[stack.length - 1];
       // pop stack
-      stack.length -= 1
-      currentParent = stack[stack.length - 1]
-      if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
-        element.end = end
+      stack.length -= 1;
+      currentParent = stack[stack.length - 1];
+      if (process.env.NODE_ENV !== "production" && options.outputSourceRange) {
+        element.end = end;
       }
-      closeElement(element)
+      closeElement(element);
     },
 
-    chars (text: string, start: number, end: number) {
+    chars(text: string, start: number, end: number) {
       if (!currentParent) {
-        if (process.env.NODE_ENV !== 'production') {
+        if (process.env.NODE_ENV !== "production") {
           if (text === template) {
             warnOnce(
-              'Component template requires a root element, rather than just text.',
+              "Component template requires a root element, rather than just text.",
               { start }
-            )
+            );
           } else if ((text = text.trim())) {
-            warnOnce(
-              `text "${text}" outside root element will be ignored.`,
-              { start }
-            )
+            warnOnce(`text "${text}" outside root element will be ignored.`, {
+              start,
+            });
           }
         }
-        return
+        return;
       }
       // IE textarea placeholder bug
       /* istanbul ignore if */
-      if (isIE &&
-        currentParent.tag === 'textarea' &&
+      if (
+        isIE &&
+        currentParent.tag === "textarea" &&
         currentParent.attrsMap.placeholder === text
       ) {
-        return
+        return;
       }
-      const children = currentParent.children
+      const children = currentParent.children;
       if (inPre || text.trim()) {
-        text = isTextTag(currentParent) ? text : decodeHTMLCached(text)
+        text = isTextTag(currentParent) ? text : decodeHTMLCached(text);
       } else if (!children.length) {
         // remove the whitespace-only node right after an opening tag
-        text = ''
+        text = "";
       } else if (whitespaceOption) {
-        if (whitespaceOption === 'condense') {
+        if (whitespaceOption === "condense") {
           // in condense mode, remove the whitespace node if it contains
           // line break, otherwise condense to a single space
-          text = lineBreakRE.test(text) ? '' : ' '
+          text = lineBreakRE.test(text) ? "" : " ";
         } else {
-          text = ' '
+          text = " ";
         }
       } else {
-        text = preserveWhitespace ? ' ' : ''
+        text = preserveWhitespace ? " " : "";
       }
       if (text) {
-        if (!inPre && whitespaceOption === 'condense') {
+        if (!inPre && whitespaceOption === "condense") {
           // condense consecutive whitespaces into single space
-          text = text.replace(whitespaceRE, ' ')
+          text = text.replace(whitespaceRE, " ");
         }
-        let res
-        let child: ?ASTNode
-        if (!inVPre && text !== ' ' && (res = parseText(text, delimiters))) {
+        let res;
+        let child: ?ASTNode;
+        if (!inVPre && text !== " " && (res = parseText(text, delimiters))) {
           child = {
             type: 2,
             expression: res.expression,
             tokens: res.tokens,
-            text
-          }
-        } else if (text !== ' ' || !children.length || children[children.length - 1].text !== ' ') {
+            text,
+          };
+        } else if (
+          text !== " " ||
+          !children.length ||
+          children[children.length - 1].text !== " "
+        ) {
           child = {
             type: 3,
-            text
-          }
+            text,
+          };
         }
         if (child) {
-          if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
-            child.start = start
-            child.end = end
+          if (
+            process.env.NODE_ENV !== "production" &&
+            options.outputSourceRange
+          ) {
+            child.start = start;
+            child.end = end;
           }
-          children.push(child)
+          children.push(child);
         }
       }
     },
-    comment (text: string, start, end) {
+
+    comment(text: string, start, end) {
       // adding anything as a sibling to the root node is forbidden
       // comments should still be allowed, but ignored
       if (currentParent) {
         const child: ASTText = {
           type: 3,
           text,
-          isComment: true
+          isComment: true,
+        };
+        if (
+          process.env.NODE_ENV !== "production" &&
+          options.outputSourceRange
+        ) {
+          child.start = start;
+          child.end = end;
         }
-        if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
-          child.start = start
-          child.end = end
-        }
-        currentParent.children.push(child)
+        currentParent.children.push(child);
       }
-    }
-  })
-  return root
+    },
+  });
+  return root;
 }
 
+// process*系列函数的作用就是对元素描述对象做进一步处理
+// 所有process*系列函数的作用都是为了让一个元素的描述对象更加充实
+// 是这个对象能更加详细地描述一个元素，并且这些函数都会用在parseHTML函数的钩子选项函数中
+
+// 另外还有很多非process*列些的函数，这些函数实际上就是工具函数
+
+// 检测el是否拥有v-pre属性，如果有v-pre属性则会在el上添加一个pre属性
 function processPre (el) {
   if (getAndRemoveAttr(el, 'v-pre') != null) {
     el.pre = true
@@ -599,8 +637,6 @@ function processOnce (el) {
   }
 }
 
-// handle content being passed to a component as slot,
-// e.g. <template slot="xxx">, <div slot-scope="xxx">
 function processSlotContent (el) {
   let slotScope
   if (el.tag === 'template') {
@@ -735,7 +771,6 @@ function getSlotName (binding) {
     : { name: `"${name}"`, dynamic: false }
 }
 
-// handle <slot/> outlets
 function processSlotOutlet (el) {
   if (el.tag === 'slot') {
     el.slotName = getBindingAttr(el, 'name')
@@ -917,6 +952,24 @@ function parseModifiers (name: string): Object | void {
   }
 }
 
+// 将标签的属性数组转换成名值对一一对象的对象
+/**
+ * attrs = [
+    {
+      name: 'v-for',
+      value: 'obj of list'
+    },
+    {
+      name: 'class',
+      value: 'box'
+    }
+  ]
+  =>
+  map = {
+    'v-for': 'obj of list',
+    'class': 'box'
+  }
+ */
 function makeAttrsMap (attrs: Array<Object>): Object {
   const map = {}
   for (let i = 0, l = attrs.length; i < l; i++) {
@@ -931,11 +984,13 @@ function makeAttrsMap (attrs: Array<Object>): Object {
   return map
 }
 
-// for script (e.g. type="x/template") or style, do not decode content
 function isTextTag (el): boolean {
   return el.tag === 'script' || el.tag === 'style'
 }
 
+// 判断当前元素是否为禁止渲染的元素，包括：
+// <style> 标签为被禁止的标签
+// 没有指定 type 属性或虽然指定了 type 属性但其值为 text/javascript 的 <script> 标签
 function isForbiddenTag (el): boolean {
   return (
     el.tag === 'style' ||
@@ -949,7 +1004,6 @@ function isForbiddenTag (el): boolean {
 const ieNSBug = /^xmlns:NS\d+/
 const ieNSPrefix = /^NS\d+:/
 
-/* istanbul ignore next */
 function guardIESVGBug (attrs) {
   const res = []
   for (let i = 0; i < attrs.length; i++) {
