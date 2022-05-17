@@ -70,13 +70,15 @@ export function initState (vm: Component) {
   }
 }
 
+// 遍历options.props并进行响应式处理
+// 将props代理到vm上，开发者可以使用this直接使用props中的数据
 function initProps (vm: Component, propsOptions: Object) {
-  const propsData = vm.$options.propsData || {}  //$options/propsData存储外界传递进来的props值
+  const propsData = vm.$options.propsData || {}  //$options.propsData存储外界传递进来的props值
   const props = vm._props = {}
   const keys = vm.$options._propKeys = []
   const isRoot = !vm.$parent  // 是否为根组件，因为根组件的$parent是不存在的
   if (!isRoot) {
-    toggleObserving(false)
+    toggleObserving(false)   // toggleObjerving是一个开关，可以用来打开或关闭当前是否可以进行数据响应式
   }
   for (const key in propsOptions) {
     keys.push(key);
@@ -136,8 +138,8 @@ function initData(vm: Component) {
         vm
       );
   }
-  
-  // props优先级 > methods优先级 > data优先级。
+
+  // props优先级 >data优先级> methods优先级
   // 即如果一个 key 在 props 中有定义了那么就不能在 data 和 methods 中出现了；如果一个 key 在 data 中出现了那么就不能在 methods 中出现了。
   // proxy data on instance
   const keys = Object.keys(data);
@@ -201,6 +203,7 @@ function initComputed (vm: Component, computed: Object) {
     }
 
     if (!isSSR) {
+      // 计算属性的观察者
       watchers[key] = new Watcher(
         vm,
         getter || noop,
@@ -277,6 +280,12 @@ function createGetterInvoker(fn) {
   }
 }
 
+// 初始化事件
+// 生产环境直接将methots中的时间挂载到vm实例上
+// 开发环境进行methots安全处理，包括：
+// 1、methots[key]必须为函数
+// 2、唯一性
+// 3、不允许和vue保留方法冲突
 function initMethods (vm: Component, methods: Object) {
   const props = vm.$options.props
   for (const key in methods) {
@@ -335,7 +344,9 @@ function createWatcher (
   return vm.$watch(expOrFn, handler, options)
 }
 
-export function stateMixin (Vue: Class<Component>) {
+export function stateMixin(Vue: Class<Component>) {
+
+  // 将data和props中的数据代理到vue实例的$data和$props中
   const dataDef = {}
   dataDef.get = function () { return this._data }
   const propsDef = {}

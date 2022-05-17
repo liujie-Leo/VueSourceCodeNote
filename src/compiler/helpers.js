@@ -66,6 +66,8 @@ function prependModifierMarker (symbol: string, name: string, dynamic?: boolean)
     : symbol + name // mark the event as captured
 }
 
+
+// addHandler函数对于元素描述的主要影响是在元素描述对象上添加了el.events属性和el.nativeEvents属性
 export function addHandler (
   el: ASTElement,
   name: string,

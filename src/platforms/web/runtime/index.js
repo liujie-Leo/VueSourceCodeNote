@@ -54,7 +54,7 @@ Vue.prototype.$mount = function (
   el?: string | Element,
   hydrating?: boolean
 ): Component {
-  el = el && inBrowser ? query(el) : undefined
+  el = el && inBrowser ? query(el) : undefined  // query函数用来根据给定的参数在DOM中查找对应的元素 
   return mountComponent(this, el, hydrating)
 }
 

@@ -92,11 +92,11 @@ function getPropDefaultValue(vm: ?Component, prop: PropOptions, key: string): an
  * props校验
  */
 function assertProp (
-  prop: PropOptions,
-  name: string,
-  value: any,
-  vm: ?Component,
-  absent: boolean
+  prop: PropOptions,  // 该prop定义对象  
+  name: string,  // prop名
+  value: any, // prop值
+  vm: ?Component, // 实例
+  absent: boolean // 是否外部组件传递了该prop值
 ) {
   // 需要传但没传的数值
   if (prop.required && absent) {
@@ -106,7 +106,7 @@ function assertProp (
     )
     return
   }
-  // 值为非必填且为null
+  // 值为非必填且为null，就不用做后面的校验了
   if (value == null && !prop.required) {
     return
   }

@@ -18,6 +18,10 @@ function createFunction (code, errors) {
   }
 }
 
+// 1、缓存编译结果，通过 createCompileToFunctionFn 函数内声明的 cache 常量实现。
+// 2、调用 compile 函数将模板字符串转成渲染函数字符串
+// 3、调用 createFunction 函数将渲染函数字符串转成真正的渲染函数
+// 4、打印编译错误，包括：模板字符串 -> 渲染函数字符串 以及 渲染函数字符串 -> 渲染函数 这两个阶段的错误
 export function createCompileToFunctionFn (compile: Function): Function {
   const cache = Object.create(null)
 

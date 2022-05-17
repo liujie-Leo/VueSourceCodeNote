@@ -15,11 +15,9 @@ let uid = 0
 export function initMixin (Vue: Class<Component>) {
   Vue.prototype._init = function (options?: Object) {
     const vm: Component = this  // 实例对象
-    // a uid
     vm._uid = uid++
-
     let startTag, endTag
-    /* istanbul ignore if */
+    // 性能测试
     if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
       startTag = `vue-perf-start:${vm._uid}`
       endTag = `vue-perf-end:${vm._uid}`
@@ -28,6 +26,7 @@ export function initMixin (Vue: Class<Component>) {
 
     vm._isVue = true  // 代表vm对象和Vue实例
 
+    // _isComponent是Vue的内部选项
     if (options && options._isComponent) {
       initInternalComponent(vm, options)
     } else {
@@ -39,20 +38,21 @@ export function initMixin (Vue: Class<Component>) {
     }
 
     if (process.env.NODE_ENV !== 'production') {
+      // 设置渲染函数的作用域代理，为开发者提供更友好的提示信息
       initProxy(vm)
     } else {
       vm._renderProxy = vm
     }
 
     vm._self = vm
-    initLifecycle(vm)
-    initEvents(vm)
-    initRender(vm)
+    initLifecycle(vm)  // 实例上的标识
+    initEvents(vm)  // 事件
+    initRender(vm)  // 渲染函数
     
     callHook(vm, 'beforeCreate')
-    initInjections(vm) 
+    initInjections(vm)  // 注入
     initState(vm)
-    initProvide(vm) 
+    initProvide(vm)
     callHook(vm, 'created')
 
     if (process.env.NODE_ENV !== 'production' && config.performance && mark) {

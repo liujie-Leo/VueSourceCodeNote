@@ -109,16 +109,18 @@ export function lifecycleMixin (Vue: Class<Component>) {
     }
     callHook(vm, 'beforeDestroy')
     vm._isBeingDestroyed = true
-    // remove self from parent
+    // 从父组件实例中移除自己
     const parent = vm.$parent
     if (parent && !parent._isBeingDestroyed && !vm.$options.abstract) {
       remove(parent.$children, vm)
     }
-    // teardown watchers
+    // 清除实例的_watcher
     if (vm._watcher) {
       vm._watcher.teardown()
     }
     let i = vm._watchers.length
+
+    // 清除实例的watchers
     while (i--) {
       vm._watchers[i].teardown()
     }
@@ -131,11 +133,14 @@ export function lifecycleMixin (Vue: Class<Component>) {
     vm._isDestroyed = true
     // invoke destroy hooks on current rendered tree
     vm.__patch__(vm._vnode, null)
+    
     // fire destroyed hook
     callHook(vm, 'destroyed')
-    // turn off all instance listeners.
+    
+    // 关闭实例的监听
     vm.$off()
-    // remove __vue__ reference
+    
+    // 实例.$el置空
     if (vm.$el) {
       vm.$el.__vue__ = null
     }

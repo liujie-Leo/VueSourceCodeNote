@@ -83,6 +83,7 @@ export default class Watcher {
     if (typeof expOrFn === 'function') {
       this.getter = expOrFn
     } else {
+      // parsePath返回一个将字符串表达式转化为实际参数的函数
       this.getter = parsePath(expOrFn)
       if (!this.getter) {
         this.getter = noop
@@ -94,13 +95,20 @@ export default class Watcher {
         )
       }
     }
+    // this.getter始终会是一个函数
+
+    // 计算属性的观察者和其他观察者实例对象的处理方式是不一样的
+    // 除计算属性的观察值之外的所有观察者实例对象都将执行else分支
     this.value = this.lazy
       ? undefined
       : this.get()
   }
 
   /**
-   * Evaluate the getter, and re-collect dependencies.
+   * get的作用就是求值
+   * 求值的目的:
+   *  - 触发get拦截器
+   *  - 获取被观察目标的值
    */
   get () {
     pushTarget(this)
@@ -132,16 +140,24 @@ export default class Watcher {
   addDep (dep: Dep) {
     const id = dep.id
     // 避免收集重复依赖
+    // newDepIds用来避免一次求值的过程收集重复的依赖，如果实例id存在于newDepIds则说明该依赖已经收集了
+    // newDeps和newDepIds总是存储当前求值时收集的实例
+    // depIds用来避免多次求值的过程中收集重复的依赖
+    // deps和depIds总是存储上一次求值时收集的实例
     if (!this.newDepIds.has(id)) {
-      this.newDepIds.add(id)
-      this.newDeps.push(dep)
+      this.newDepIds.add(id)  // 收集depId
+      this.newDeps.push(dep)  // 收集dep实例
       if (!this.depIds.has(id)) {
         dep.addSub(this)
       }
     }
   }
 
-  cleanupDeps () {
+  cleanupDeps() {
+    
+    // 遍历上一次求值时收集的依赖
+    // 检查上一次求值时收集的依赖是否存在于这一次的依赖当中
+    // 如果不存在，则在上一次求值时收集的依赖中移除他
     let i = this.deps.length
     while (i--) {
       const dep = this.deps[i]
@@ -149,10 +165,14 @@ export default class Watcher {
         dep.removeSub(this)
       }
     }
+
+    // 将newDepIds赋值给depIds，然后重置newDepIds
     let tmp = this.depIds
     this.depIds = this.newDepIds
     this.newDepIds = tmp
     this.newDepIds.clear()
+
+    // 将newDeps赋值给deps，然后重置newDeps
     tmp = this.deps
     this.deps = this.newDeps
     this.newDeps = tmp
@@ -169,7 +189,9 @@ export default class Watcher {
     }
   }
 
-  run () {
+  // 数据更新时执行的更新函数
+  run() {
+    // active用来表示一个观察者是否出于激活状态
     if (this.active) {
       const value = this.get()
       if (
@@ -179,6 +201,7 @@ export default class Watcher {
       ) {
         const oldValue = this.value
         this.value = value
+        // 回调函数如果是开发者写的，需要进行错误预处理
         if (this.user) {
           const info = `callback for watcher "${this.expression}"`
           invokeWithErrorHandling(this.cb, this.vm, [value, oldValue], this.vm, info)

@@ -400,7 +400,7 @@ export function mergeOptions (
   normalizeInject(child, vm); //规范化inject
   normalizeDirectives(child); //规范化directive
 
-  // 暂时不懂
+  // 处理extends和mixin选项
   if (!child._base) {
     if (child.extends) {
       parent = mergeOptions(parent, child.extends, vm);

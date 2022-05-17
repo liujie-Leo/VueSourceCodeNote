@@ -44,9 +44,11 @@ export function generate (
   ast: ASTElement | void,
   options: CompilerOptions
 ): CodegenResult {
+  console.log(ast);
   const state = new CodegenState(options)
   // fix #11483, Root level <script> tags should not be rendered.
-  const code = ast ? (ast.tag === 'script' ? 'null' : genElement(ast, state)) : '_c("div")'
+  const code = ast ? (ast.tag === 'script' ? 'null' : genElement(ast, state)) : '_c("div")'  // code为render函数字符串
+  console.log(code);
   return {
     render: `with(this){return ${code}}`,
     staticRenderFns: state.staticRenderFns
@@ -57,7 +59,6 @@ export function genElement (el: ASTElement, state: CodegenState): string {
   if (el.parent) {
     el.pre = el.pre || el.parent.pre
   }
-
   if (el.staticRoot && !el.staticProcessed) {
     return genStatic(el, state)
   } else if (el.once && !el.onceProcessed) {
@@ -82,11 +83,7 @@ export function genElement (el: ASTElement, state: CodegenState): string {
       }
 
       const children = el.inlineTemplate ? null : genChildren(el, state, true)
-      code = `_c('${el.tag}'${
-        data ? `,${data}` : '' // data
-      }${
-        children ? `,${children}` : '' // children
-      })`
+      code = `_c('${el.tag}'${data ? `,${data}` : '' }${children ? `,${children}` : '' })`
     }
     // module transforms
     for (let i = 0; i < state.transforms.length; i++) {
@@ -165,11 +162,7 @@ function genIfConditions (
 
   const condition = conditions.shift()
   if (condition.exp) {
-    return `(${condition.exp})?${
-      genTernaryExp(condition.block)
-    }:${
-      genIfConditions(conditions, state, altGen, altEmpty)
-    }`
+    return `(${condition.exp})?${genTernaryExp(condition.block)}:${genIfConditions(conditions, state, altGen, altEmpty)}`
   } else {
     return `${genTernaryExp(condition.block)}`
   }

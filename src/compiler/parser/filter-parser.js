@@ -7,11 +7,11 @@ export function parseFilters (exp: string): string {
   let inDouble = false
   let inTemplateString = false
   let inRegex = false
-  let curly = 0
-  let square = 0
-  let paren = 0
-  let lastFilterIndex = 0
-  let c, prev, i, expression, filters
+  let curly = 0  // 在解析绑定的属性时，每遇到{则加1，每遇到}则减一
+  let square = 0 // 在解析绑定的属性时，每遇到[则加1，每遇到]则减一
+  let paren = 0 // 在解析绑定的属性时，每遇到(则加1，每遇到)则减一
+  let lastFilterIndex = 0  // 属性值字符串中字符的索引，用来确定过滤器的位置
+  let c, prev, i, expression, filters // c 当前读入字符对应的ASCII码  prev当前字符的前一个字符所对应的ASCII码
 
   for (i = 0; i < exp.length; i++) {
     prev = c

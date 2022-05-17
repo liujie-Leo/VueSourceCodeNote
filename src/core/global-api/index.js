@@ -31,6 +31,7 @@ export function initGlobalAPI (Vue: GlobalAPI) {
   }
   Object.defineProperty(Vue, "config", configDef);
 
+  // 不被认为是公共api，仅用于vue初始化，项目中尽量不要使用
   Vue.util = {
     warn,
     extend,

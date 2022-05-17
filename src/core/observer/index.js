@@ -52,6 +52,7 @@ export class Observer {
     }
   }
 
+  // 观察对象
   walk (obj: Object) {
     const keys = Object.keys(obj)
     for (let i = 0; i < keys.length; i++) {
@@ -59,6 +60,7 @@ export class Observer {
     }
   }
 
+  // 观察数组
   observeArray (items: Array<any>) {
     for (let i = 0, l = items.length; i < l; i++) {
       observe(items[i])
@@ -109,7 +111,7 @@ export function defineReactive (
   customSetter?: ?Function,
   shallow?: boolean
 ) {
-  // 定义依赖收集器，data中的每一个key都通过闭包引用着属于自己的那一个dep
+  // 定义依赖收集器，data中的每一个key都通过闭包引用着属于自己的那一个dep
   const dep = new Dep();
 
   // 判断这个obj[key]是否可配置
@@ -137,7 +139,10 @@ export function defineReactive (
       if (Dep.target) {
         dep.depend(); // 这里闭包引用了上面的dep常量
         if (childOb) {
+          // 既把依赖收集到当前key所闭包引用的dev，同时还将依赖收集到key._ob_.dep中
           childOb.dep.depend();
+
+          // 如果当前key所引用的值是数组，则执行数组的响应式方法
           if (Array.isArray(value)) {
             dependArray(value);
           }
@@ -152,7 +157,7 @@ export function defineReactive (
       if (newVal === value || (newVal !== newVal && value !== value)) {
         return;
       }
-      // 非生产环境，如果有customSetter函数，则执行这个函数
+      // 非生产环境，如果有customSetter函数，则执行这个函数，该函数的作用是开发者再执行响应式处理时，用户进行set的时候触发的回调函数
       if (process.env.NODE_ENV !== "production" && customSetter) {
         customSetter();
       }
@@ -189,7 +194,7 @@ export function set(target: Array<any> | Object, key: any, val: any): any {
     target.splice(key, 1, val);  //替换元素，将制定位置的元素替换为新元素，并且splice方法本身因为做了拦截，是能触发响应的
     return val;
   }
-  // 对于对象，要保证key在target中，并且key不在Object构造函数中
+  // 对于对象，要保证key在target中，并且key不在Object构造函数中，这时说明这个key已经是响应式数据了。直接赋值即可
   if (key in target && !(key in Object.prototype)) {
     target[key] = val;
     return val;

@@ -18,6 +18,11 @@ const genStaticKeysCached = cached(genStaticKeys)
  *    create fresh nodes for them on each re-render;
  * 2. Completely skip them in the patching process.
  */
+// 整个optimize就是干两件事情
+// 标记静态节点
+// 标记静态根
+// 深度遍历整个AST，去检测每一个子树是不是静态节点
+// 如果是静态节点则他们生成的DOM永远不需要改变，在运行时对模板的更新起到极大的优化作用
 export function optimize (root: ?ASTElement, options: CompilerOptions) {
   if (!root) return
   isStaticKey = genStaticKeysCached(options.staticKeys || '')
@@ -97,6 +102,7 @@ function markStaticRoots (node: ASTNode, isInFor: boolean) {
   }
 }
 
+// 判断一个AST元素节点是否静态
 function isStatic (node: ASTNode): boolean {
   if (node.type === 2) { // expression
     return false

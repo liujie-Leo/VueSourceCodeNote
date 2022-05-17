@@ -66,6 +66,8 @@ export function createCompilerCreator (baseCompile: Function): Function {
       finalOptions.warn = warn;
 
       const compiled = baseCompile(template.trim(), finalOptions);
+
+      // 检查抽象语法树中是否存在错误表达式
       if (process.env.NODE_ENV !== "production") {
         detectErrors(compiled.ast, warn);
       }

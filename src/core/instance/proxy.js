@@ -52,13 +52,16 @@ if (process.env.NODE_ENV !== 'production') {
     })
   }
 
+  // hasHandler代理的作用就是在开发过程中给开发者一个友好的提示
   const hasHandler = {
     has (target, key) {
       const has = key in target
-      const isAllowed = allowedGlobals(key) ||
-        (typeof key === 'string' && key.charAt(0) === '_' && !(key in target.$data))
+      const isAllowed = allowedGlobals(key) || (typeof key === 'string' && key.charAt(0) === '_' && !(key in target.$data))
+      // key即不存在与vue实例中也不存在与全局属性中，全局属性的值比如Number()
       if (!has && !isAllowed) {
+        // 如果key在$data中
         if (key in target.$data) warnReservedPrefix(target, key)
+          // 不在$data中则报错
         else warnNonPresent(target, key)
       }
       return has || !isAllowed

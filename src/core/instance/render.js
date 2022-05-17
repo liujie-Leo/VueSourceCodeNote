@@ -25,7 +25,7 @@ export function initRender (vm: Component) {
   const renderContext = parentVnode && parentVnode.context
   vm.$slots = resolveSlots(options._renderChildren, renderContext)
   vm.$scopedSlots = emptyObject
-  vm._c = (a, b, c, d) => createElement(vm, a, b, c, d, false)
+  vm._c = (a, b, c, d) => createElement(vm, a, b, c, d, false)  // a:tag  b:data  c:children  d:normalizationType
   vm.$createElement = (a, b, c, d) => createElement(vm, a, b, c, d, true)
 
   const parentData = parentVnode && parentVnode.data
@@ -53,7 +53,7 @@ export function setCurrentRenderingInstance (vm: Component) {
 }
 
 export function renderMixin (Vue: Class<Component>) {
-  // install runtime convenience helpers
+  // 在vue实例中安装一些渲染辅助函数
   installRenderHelpers(Vue.prototype)
 
   Vue.prototype.$nextTick = function (fn: Function) {
